@@ -112,6 +112,8 @@
     .drill-roles { font-size: 10pt; }
   }
   .print-header { display: none; }
+  .print-only { display: none; }
+  @media print { .print-only { display: block !important; } }
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -179,7 +181,7 @@ const DEFAULTS={
 
 const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
 
-let state={tab:"plan",block:1,theme:null,session:{drills:[],techniques:[],positionals:[]},libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
+let state={tab:"plan",block:1,theme:null,session:{drills:[],techniques:[],positionals:[]},sessionNotes:"",libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
 
 function signIn(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>console.error("Sign-in error:",e));}
 function signOut(){auth.signOut();}
@@ -216,18 +218,20 @@ function loadDefaults(theme,subtopic){
 function loadAllDefaults(){THEMES.forEach(t=>SUBTOPICS[t.id].forEach(s=>loadDefaults(t.id,s)));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function setBlock(id){state.block=id;state.theme=null;render();}
-function setTheme(id){const next=state.theme===id?null:id;state.theme=next;state.session=next?{drills:[null,null],techniques:[null,null,null],positionals:[null]}:{drills:[],techniques:[],positionals:[]};render();}
+function setTheme(id){const next=state.theme===id?null:id;state.theme=next;state.session=next?{drills:[null,null],techniques:[null,null,null],positionals:[null]}:{drills:[],techniques:[],positionals:[]};state.sessionNotes="";render();}
+function setSessionNotes(v){state.sessionNotes=v;}
+function resetSession(){state.session={drills:[null,null],techniques:[null,null,null],positionals:[null]};state.sessionNotes="";render();}
 function setTab(t){state.tab=t;render();}
 function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
 function showAddForm(overrides={}){
   const defTheme=state.libFilter.theme||"standing";
   state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:"",...overrides};
-  state.editId=null;state.showForm=true;render();
+  state.editId=null;state.showForm=true;render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function editItem(id){
   const item=state.library.find(i=>i.id===id);if(!item)return;
   state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,roles:item.roles||"symmetric",goal:item.goal||"",attackerGoal:item.attackerGoal||"",defenderGoal:item.defenderGoal||"",videoUrl:item.videoUrl||""};
-  state.editId=id;state.showForm=true;render();
+  state.editId=id;state.showForm=true;render();window.scrollTo({top:0,behavior:'smooth'});
 }
 function deleteItem(id){state.library=state.library.filter(i=>i.id!==id);saveLib();render();}
 function cancelForm(){state.showForm=false;state.editId=null;render();}
@@ -289,7 +293,7 @@ function renderPlan(){
     const id=state.session[type][index];
     const item=id?state.library.find(i=>i.id===id):null;
     const opts=slotOpts(type);
-    const label=typeLabel[type];
+    const label=type==="positionals"?"sparring":typeLabel[type];
     return`<div style="margin-bottom:8px">
       <div style="display:flex;gap:6px;align-items:center" class="no-print">
         <select class="form-select" style="flex:1" onchange="setSessionItem('${type}',${index},this.value)">
@@ -313,6 +317,7 @@ function renderPlan(){
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session builder</p>
           <div style="display:flex;gap:6px">
+            <button class="print-btn no-print" onclick="resetSession()">Reset</button>
             <button class="print-btn no-print" onclick="buildSession()">Auto-build</button>
             ${state.user?`<button class="print-btn no-print" onclick="logSession()">Log session</button>`:""}
             <button class="print-btn" onclick="window.print()">Print</button>
@@ -337,15 +342,18 @@ function renderPlan(){
           <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('techniques')">+ Add technique</button>
         </div>
         <div class="seg">
-          <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
+          <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Sparring</span></div><span class="seg-time">15–20 min</span></div>
           ${state.session.positionals.map((_,i)=>slot("positionals",i)).join("")}
-          <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('positionals')">+ Add positional</button>
-          <p class="lbl" style="margin-top:8px">Free rolling</p>
-          <div class="pos-box">Unrestricted rolling. Submissions on. Emphasis on positional dominance.</div>
+          <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('positionals')">+ Add sparring</button>
         </div>
         <div class="close-row">
           <div><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Close-out</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">Q&A · coach notes · photos</div></div>
           <span style="font-size:13px;color:#639922;font-weight:500">5 min</span>
+        </div>
+        <div style="margin-top:8px">
+          <p class="lbl">Announcements &amp; notes (optional)</p>
+          <textarea class="form-textarea no-print" oninput="setSessionNotes(this.value)" placeholder="e.g. Promotions, upcoming events, reminders…">${state.sessionNotes}</textarea>
+          ${state.sessionNotes?`<div class="print-only" style="font-size:12pt;white-space:pre-wrap;padding:8px 0">${state.sessionNotes}</div>`:""}
         </div>
       </div>
     `:`<div style="text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px">Select a theme above to build today's session</div>`}
@@ -370,7 +378,7 @@ function renderLibrary(){
         <div class="type-toggle">
           <button class="type-opt${state.form.type==="drill"?" on":""}" onclick="setFormField('type','drill')">Drill</button>
           <button class="type-opt${state.form.type==="technique"?" on":""}" onclick="setFormField('type','technique')">Technique</button>
-          <button class="type-opt${state.form.type==="positional"?" on":""}" onclick="setFormField('type','positional')">Positional</button>
+          <button class="type-opt${state.form.type==="positional"?" on":""}" onclick="setFormField('type','positional')">Sparring</button>
         </div>
       </div>
       <div class="form-row">
@@ -434,7 +442,7 @@ function renderLibrary(){
       <div style="display:flex;gap:6px">
         <button class="filter-btn${state.libFilter.type==="drill"?" on":""}" onclick="setLibFilter('type','drill')">Drills</button>
         <button class="filter-btn${state.libFilter.type==="technique"?" on":""}" onclick="setLibFilter('type','technique')">Techniques</button>
-        <button class="filter-btn${state.libFilter.type==="positional"?" on":""}" onclick="setLibFilter('type','positional')">Positional</button>
+        <button class="filter-btn${state.libFilter.type==="positional"?" on":""}" onclick="setLibFilter('type','positional')">Sparring</button>
       </div>
     </div>
     ${formHtml}
@@ -443,7 +451,7 @@ function renderLibrary(){
       <div class="lib-item">
         <div style="flex:1">
           <div style="margin-bottom:4px">
-            <span class="badge badge-${item.type}">${item.type}</span>
+            <span class="badge badge-${item.type}">${item.type==="positional"?"sparring":item.type}</span>
             <span style="font-size:11px;color:var(--color-text-secondary)">${THEMES.find(t=>t.id===item.theme)?.label}</span>
             ${item.videoUrl?`<a href="${item.videoUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#639922;margin-left:6px;text-decoration:none">▶ Watch</a>`:""}
           </div>
