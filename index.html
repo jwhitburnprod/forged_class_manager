@@ -179,7 +179,7 @@ const DEFAULTS={
 
 const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
 
-let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:""}};
+let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
 
 function signIn(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>console.error("Sign-in error:",e));}
 function signOut(){auth.signOut();}
@@ -221,27 +221,27 @@ function setTab(t){state.tab=t;render();}
 function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
 function showAddForm(overrides={}){
   const defTheme=state.libFilter.theme||"standing";
-  state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,subtopic:SUBTOPICS[defTheme][0],roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",...overrides};
+  state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:"",...overrides};
   state.editId=null;state.showForm=true;render();
 }
 function editItem(id){
   const item=state.library.find(i=>i.id===id);if(!item)return;
-  state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,subtopic:item.subtopic,roles:item.roles||"symmetric",goal:item.goal||item.note||"",attackerGoal:item.attackerGoal||"",defenderGoal:item.defenderGoal||""};
+  state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,roles:item.roles||"symmetric",goal:item.goal||"",attackerGoal:item.attackerGoal||"",defenderGoal:item.defenderGoal||"",videoUrl:item.videoUrl||""};
   state.editId=id;state.showForm=true;render();
 }
 function deleteItem(id){state.library=state.library.filter(i=>i.id!==id);saveLib();render();}
 function cancelForm(){state.showForm=false;state.editId=null;render();}
-function setFormField(k,v){state.form[k]=v;if(k==="theme")state.form.subtopic=SUBTOPICS[v][0];if(k!=="name"&&k!=="note"&&k!=="goal"&&k!=="attackerGoal"&&k!=="defenderGoal")render();}
-function setLibSearch(v){state.libSearch=v;render();}
+function setFormField(k,v){state.form[k]=v;if(k!=="name"&&k!=="note"&&k!=="goal"&&k!=="attackerGoal"&&k!=="defenderGoal"&&k!=="videoUrl")render();}
+function setLibSearch(v){state.libSearch=v;render();const el=document.getElementById("lib-search");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
 function saveForm(){
   if(!state.form.name.trim())return;
   const isDrill=state.form.type==="drill";
-  const item={name:state.form.name.trim(),type:state.form.type,theme:state.form.theme,subtopic:state.form.subtopic,note:isDrill?"":state.form.note.trim()};
+  const item={name:state.form.name.trim(),type:state.form.type,theme:state.form.theme,note:isDrill?"":state.form.note.trim(),videoUrl:state.form.videoUrl.trim()};
   if(isDrill){item.roles=state.form.roles;item.goal=state.form.roles==="symmetric"?state.form.goal.trim():"";item.attackerGoal=state.form.roles==="asymmetric"?state.form.attackerGoal.trim():"";item.defenderGoal=state.form.roles==="asymmetric"?state.form.defenderGoal.trim():"";}
   if(state.editId){
     state.library=state.library.map(i=>i.id===state.editId?{...i,...item}:i);
   }else{
-    if(state.form.type==="positional"){state.library=state.library.filter(i=>!(i.theme===state.form.theme&&i.subtopic===state.form.subtopic&&i.type==="positional"));}
+    if(state.form.type==="positional"){state.library=state.library.filter(i=>!(i.theme===state.form.theme&&i.type==="positional"));}
     state.library.push({id:uid(),...item});
   }
   saveLib();state.showForm=false;state.editId=null;render();
@@ -269,7 +269,7 @@ function renderPlan(){
   const def=state.theme?DEFAULTS[state.theme]?.[firstSub]:null;
   const getDrills=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
   const getTechs=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
-  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{text:c[0].name,isDefault:false}:{text:def?.positional||"",isDefault:true};};
+  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{name:c[0].name,desc:c[0].note||"",isDefault:false}:{name:"",desc:def?.positional||"",isDefault:true};};
   return`
     <div style="margin-bottom:1.5rem">
       <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Today's theme</p>
@@ -307,7 +307,7 @@ function renderPlan(){
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
           <p class="lbl">Positional setup</p>
-          ${(()=>{const p=getPos();return`<div class="pos-box${p.isDefault?"":" custom"}" style="${p.isDefault?"":"border-left:2px solid #3B6D11;border-radius:0"}">${p.text}</div>${p.isDefault?`<div class="default-note">Using default — load and edit in Library tab</div>`:""}`})()}
+          ${(()=>{const p=getPos();return`<div class="pos-box${p.isDefault?"":" custom"}" style="${p.isDefault?"":"border-left:2px solid #3B6D11;border-radius:0"}">${p.isDefault?p.desc:`${p.name?`<div style="font-weight:500;margin-bottom:${p.desc?"4px":"0"}">${p.name}</div>`:""}${p.desc?`<div style="font-size:12px">${p.desc}</div>`:""}`}</div>${p.isDefault?`<div class="default-note">Using default — load and edit in Library tab</div>`:""}`})()}
           <p class="lbl" style="margin-top:8px">Free rolling</p>
           <div class="pos-box">Unrestricted rolling. Submissions on. Emphasis on positional dominance.</div>
         </div>
@@ -328,7 +328,7 @@ function renderLibrary(){
     if(q&&!i.name.toLowerCase().includes(q)&&!(i.note||"").toLowerCase().includes(q)&&!(i.goal||"").toLowerCase().includes(q)&&!(i.attackerGoal||"").toLowerCase().includes(q)&&!(i.defenderGoal||"").toLowerCase().includes(q))return false;
     return true;
   });
-  const positionalWarn=state.form.type==="positional"&&!state.editId&&libFor(state.form.theme,state.form.subtopic,"positional").length>0;
+  const positionalWarn=state.form.type==="positional"&&!state.editId&&state.library.filter(i=>i.theme===state.form.theme&&i.type==="positional").length>0;
   const allLoaded=!THEMES.some(t=>SUBTOPICS[t.id].some(s=>hasDefaults(t.id,s)));
   const formHtml=state.showForm?`
     <div class="form-card">
@@ -341,26 +341,22 @@ function renderLibrary(){
           <button class="type-opt${state.form.type==="positional"?" on":""}" onclick="setFormField('type','positional')">Positional</button>
         </div>
       </div>
-      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label class="form-label">Theme</label>
-          <select class="form-select" onchange="setFormField('theme',this.value)">
-            ${THEMES.map(t=>`<option value="${t.id}"${state.form.theme===t.id?" selected":""}>${t.label}</option>`).join("")}
-          </select>
-        </div>
-        <div><label class="form-label">Sub-topic</label>
-          <select class="form-select" onchange="setFormField('subtopic',this.value)">
-            ${SUBTOPICS[state.form.theme].map(s=>`<option value="${s}"${state.form.subtopic===s?" selected":""}>${s}</option>`).join("")}
-          </select>
-        </div>
-      </div>
-      ${positionalWarn?`<div class="warn-box">A positional already exists for ${THEMES.find(t=>t.id===state.form.theme)?.label} / ${state.form.subtopic} — saving will replace it.</div>`:""}
       <div class="form-row">
-        <label class="form-label">${state.form.type==="positional"?"Setup description":"Name"}</label>
-        ${state.form.type==="positional"
-          ?`<textarea class="form-textarea" oninput="setFormField('name',this.value)" placeholder="Describe the starting position and winning conditions...">${state.form.name}</textarea>`
-          :`<input class="form-input" type="text" value="${state.form.name.replace(/"/g,"&quot;")}" oninput="setFormField('name',this.value)" placeholder="${state.form.type==="drill"?"e.g. Single leg finish game":"e.g. Penetration step mechanics"}">`
-        }
+        <label class="form-label">Theme</label>
+        <select class="form-select" onchange="setFormField('theme',this.value)">
+          ${THEMES.map(t=>`<option value="${t.id}"${state.form.theme===t.id?" selected":""}>${t.label}</option>`).join("")}
+        </select>
       </div>
+      ${positionalWarn?`<div class="warn-box">A positional already exists for ${THEMES.find(t=>t.id===state.form.theme)?.label} — saving will replace it.</div>`:""}
+      <div class="form-row">
+        <label class="form-label">Name</label>
+        <input class="form-input" type="text" value="${state.form.name.replace(/"/g,"&quot;")}" oninput="setFormField('name',this.value)" placeholder="${state.form.type==="drill"?"e.g. Single leg finish game":state.form.type==="technique"?"e.g. Penetration step mechanics":"e.g. Closed guard — mount attack"}">
+      </div>
+      ${state.form.type==="positional"?`
+      <div class="form-row">
+        <label class="form-label">Setup / winning conditions</label>
+        <textarea class="form-textarea" oninput="setFormField('note',this.value)" placeholder="Describe the starting position and winning conditions...">${state.form.note}</textarea>
+      </div>`:""}
       ${state.form.type==="drill"?`
       <div class="form-row">
         <label class="form-label">Drill structure</label>
@@ -387,6 +383,10 @@ function renderLibrary(){
         <label class="form-label">Coaching note (optional)</label>
         <input class="form-input" type="text" value="${state.form.note.replace(/"/g,"&quot;")}" oninput="setFormField('note',this.value)" placeholder="e.g. Focus on hip position throughout">
       </div>`:""}
+      <div class="form-row">
+        <label class="form-label">Video link (optional)</label>
+        <input class="form-input" type="url" value="${(state.form.videoUrl||"").replace(/"/g,"&quot;")}" oninput="setFormField('videoUrl',this.value)" placeholder="e.g. https://www.youtube.com/watch?v=...">
+      </div>
       <div class="form-btns">
         <button class="cancel-btn" onclick="cancelForm()">Cancel</button>
         <button class="save-btn" onclick="saveForm()">Save to library</button>
@@ -395,7 +395,7 @@ function renderLibrary(){
   `:"";
   return`
     <div style="margin-bottom:1rem">
-      <input class="form-input" type="search" placeholder="Search library…" value="${state.libSearch.replace(/"/g,'&quot;')}" oninput="setLibSearch(this.value)" style="margin-bottom:10px">
+      <input id="lib-search" class="form-input" type="search" placeholder="Search library…" value="${state.libSearch.replace(/"/g,'&quot;')}" oninput="setLibSearch(this.value)" style="margin-bottom:10px">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
         ${THEMES.map(t=>`<button class="filter-btn${state.libFilter.theme===t.id?" on":""}" onclick="setLibFilter('theme','${t.id}')">${t.label}</button>`).join("")}
       </div>
@@ -412,7 +412,8 @@ function renderLibrary(){
         <div style="flex:1">
           <div style="margin-bottom:4px">
             <span class="badge badge-${item.type}">${item.type}</span>
-            <span style="font-size:11px;color:var(--color-text-secondary)">${THEMES.find(t=>t.id===item.theme)?.label} · ${item.subtopic}</span>
+            <span style="font-size:11px;color:var(--color-text-secondary)">${THEMES.find(t=>t.id===item.theme)?.label}</span>
+            ${item.videoUrl?`<a href="${item.videoUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#639922;margin-left:6px;text-decoration:none">▶ Watch</a>`:""}
           </div>
           <div class="lib-item-name">${item.name}</div>
           ${item.type==="drill"?(item.roles==="asymmetric"?`<div class="lib-item-note">Attacker: ${item.attackerGoal||"—"}</div><div class="lib-item-note">Defender: ${item.defenderGoal||"—"}</div>`:(item.goal?`<div class="lib-item-note">Goal: ${item.goal}</div>`:"")):item.note?`<div class="lib-item-note">${item.note}</div>`:""}
