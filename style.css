@@ -81,7 +81,7 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .cancel-btn{padding:10px 16px;background:transparent;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-secondary);cursor:pointer}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;margin-right:4px}
 .badge-drill{background:#DBEAFE;color:#1D4ED8}
-.badge-technique{background:#CCFBF1;color:#0F766E}
+.badge-technique{background:#FEF9C3;color:#854D0E}
 .badge-positional{background:#FEE2E2;color:#B91C1C}
 .default-note{font-size:11px;color:var(--color-text-secondary);font-style:italic;margin-top:4px;padding:6px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)}
 .warn-box{font-size:12px;color:#633806;background:#FAEEDA;border-radius:var(--border-radius-md);padding:6px 10px;margin-bottom:10px}

@@ -173,8 +173,6 @@ function renderPlan(){
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">04</span><span class="seg-title">Close-out</span></div><span class="seg-time">5 min</span></div>
-          <p class="lbl">Q&amp;A · coach notes · photos</p>
-          <p class="lbl" style="margin-top:8px">Announcements &amp; notes</p>
           <textarea class="form-textarea no-print" oninput="setSessionNotes(this.value)" placeholder="e.g. Promotions, upcoming events, reminders…">${state.sessionNotes}</textarea>
           <div id="session-notes-print" class="print-only" style="font-size:12pt;white-space:pre-wrap;padding:8px 0">${state.sessionNotes}</div>
         </div>
