@@ -105,7 +105,12 @@ function removeSessionSlot(type,index){state.session[type].splice(index,1);rende
 function renderPlan(){
   const themeLabel=state.theme?THEMES.find(t=>t.id===state.theme).label:null;
   const typeLabel={drills:"drill",techniques:"technique",positionals:"positional"};
-  function slotOpts(type){return state.library.filter(i=>i.theme===state.theme&&i.type===typeLabel[type]);}
+  function slotOpts(type){
+    if(type==="drills"){
+      return state.library.filter(i=>i.type==="drill"&&(i.theme===state.theme||i.theme==="standing"));
+    }
+    return state.library.filter(i=>i.theme===state.theme&&i.type===typeLabel[type]);
+  }
   function itemDetail(type,item){
     if(!item)return"";
     const video=item.videoUrl?`<a href="${item.videoUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#639922;margin-top:3px;display:inline-block">▶ Watch</a>`:"";
