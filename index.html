@@ -93,9 +93,25 @@
   .default-note{font-size:11px;color:var(--color-text-secondary);font-style:italic;margin-top:4px;padding:6px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)}
   .warn-box{font-size:12px;color:#633806;background:#FAEEDA;border-radius:var(--border-radius-md);padding:6px 10px;margin-bottom:10px}
   @media print {
-    body { background: white; }
-    .tab-bar, .print-btn, .lib-actions, .add-btn, .load-btn { display: none !important; }
+    body { background: white; color: #1a1a18; font-size: 12pt; }
+    .tab-bar, .print-btn, .lib-actions, .add-btn, .load-btn,
+    .blk-btn, .theme-btn, .filter-btn, .default-note { display: none !important; }
+    #app { max-width: 100% !important; padding: 0 !important; }
+    .seg { border: 1px solid #ccc; border-radius: 0; padding: 10px 14px; margin-bottom: 10px; page-break-inside: avoid; }
+    .seg-hd { margin-bottom: 8px; }
+    .seg-num { font-size: 10pt; color: #639922; }
+    .seg-title { font-size: 13pt; font-weight: 600; }
+    .seg-time { font-size: 10pt; color: #555; }
+    .drill, .pos-box { background: #f9f9f9 !important; border-left: 2px solid #639922; padding: 6px 10px; margin-bottom: 4px; font-size: 11pt; }
+    .drill.standup { border-color: #97C459; }
+    .tech-row { font-size: 11pt; padding: 5px 8px; background: #f9f9f9 !important; margin-bottom: 3px; }
+    .lbl { font-size: 9pt; color: #666; margin: 6px 0 3px; }
+    .close-row { border: 1px solid #ccc; padding: 8px 12px; margin-top: 6px; }
+    .print-header { display: block !important; }
+    .drill-goal { font-size: 10pt; color: #444; }
+    .drill-roles { font-size: 10pt; }
   }
+  .print-header { display: none; }
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -161,7 +177,7 @@ const DEFAULTS={
 
 const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
 
-let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},library:[],loading:true,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected"}};
+let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:""}};
 
 // Firestore: real-time listener — updates all devices automatically
 function init(){
@@ -199,24 +215,28 @@ function setTab(t){state.tab=t;render();}
 function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
 function showAddForm(overrides={}){
   const defTheme=state.libFilter.theme||"standing";
-  state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,subtopic:SUBTOPICS[defTheme][0],...overrides};
+  state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,subtopic:SUBTOPICS[defTheme][0],roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",...overrides};
   state.editId=null;state.showForm=true;render();
 }
 function editItem(id){
   const item=state.library.find(i=>i.id===id);if(!item)return;
-  state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,subtopic:item.subtopic};
+  state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,subtopic:item.subtopic,roles:item.roles||"symmetric",goal:item.goal||item.note||"",attackerGoal:item.attackerGoal||"",defenderGoal:item.defenderGoal||""};
   state.editId=id;state.showForm=true;render();
 }
 function deleteItem(id){state.library=state.library.filter(i=>i.id!==id);saveLib();render();}
 function cancelForm(){state.showForm=false;state.editId=null;render();}
-function setFormField(k,v){state.form[k]=v;if(k==="theme")state.form.subtopic=SUBTOPICS[v][0];if(k!=="name"&&k!=="note")render();}
+function setFormField(k,v){state.form[k]=v;if(k==="theme")state.form.subtopic=SUBTOPICS[v][0];if(k!=="name"&&k!=="note"&&k!=="goal"&&k!=="attackerGoal"&&k!=="defenderGoal")render();}
+function setLibSearch(v){state.libSearch=v;render();}
 function saveForm(){
   if(!state.form.name.trim())return;
+  const isDrill=state.form.type==="drill";
+  const item={name:state.form.name.trim(),type:state.form.type,theme:state.form.theme,subtopic:state.form.subtopic,note:isDrill?"":state.form.note.trim()};
+  if(isDrill){item.roles=state.form.roles;item.goal=state.form.roles==="symmetric"?state.form.goal.trim():"";item.attackerGoal=state.form.roles==="asymmetric"?state.form.attackerGoal.trim():"";item.defenderGoal=state.form.roles==="asymmetric"?state.form.defenderGoal.trim():"";}
   if(state.editId){
-    state.library=state.library.map(i=>i.id===state.editId?{...i,...state.form,name:state.form.name.trim(),note:state.form.note.trim()}:i);
+    state.library=state.library.map(i=>i.id===state.editId?{...i,...item}:i);
   }else{
     if(state.form.type==="positional"){state.library=state.library.filter(i=>!(i.theme===state.form.theme&&i.subtopic===state.form.subtopic&&i.type==="positional"));}
-    state.library.push({id:uid(),name:state.form.name.trim(),note:state.form.note.trim(),type:state.form.type,theme:state.form.theme,subtopic:state.form.subtopic});
+    state.library.push({id:uid(),...item});
   }
   saveLib();state.showForm=false;state.editId=null;render();
 }
@@ -252,6 +272,10 @@ function renderPlan(){
           <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session plan</p>
           <button class="print-btn" onclick="window.print()">Print</button>
         </div>
+        <div class="print-header" style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ccc">
+          <div style="font-size:14pt;font-weight:700">Forged Grappling</div>
+          <div style="font-size:10pt;color:#555">${new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+        </div>
         <div style="background:#EAF3DE;border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:8px;border:0.5px solid #C0DD97">
           <div style="font-size:16px;font-weight:500;color:#27500A">${themeLabel} — ${sub}</div>
           <div style="font-size:12px;color:#3B6D11;margin-top:2px">Block ${state.block} · 60 minutes</div>
@@ -259,7 +283,7 @@ function renderPlan(){
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">01</span><span class="seg-title">Dynamic drills</span></div><span class="seg-time">15–20 min</span></div>
           ${state.theme!=="standing"?`<p class="lbl">Standup opener (always)</p><div class="drill standup">${STANDING_OPENER[standingSub]} <span style="font-size:11px;color:#639922">[${standingSub}]</span></div><p class="lbl" style="margin-top:10px">Theme drills — ${themeLabel}</p>`:`<p class="lbl">Standing drills</p>`}
-          ${(()=>{const d=getDrills();if(d.isDefault)return d.defaults.map(x=>`<div class="drill">${x}</div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return d.items.map(x=>`<div class="drill custom">${x.name}${x.note?` <span style="font-size:12px;color:#639922">— ${x.note}</span>`:""}</div>`).join("");})()}
+          ${(()=>{const d=getDrills();if(d.isDefault)return d.defaults.map(x=>`<div class="drill">${x}</div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return d.items.map(x=>{const goalHtml=x.roles==="asymmetric"?`<div class="drill-roles" style="font-size:11px;margin-top:3px"><span style="color:#639922">Attacker:</span> ${x.attackerGoal||"—"} &nbsp;·&nbsp; <span style="color:#639922">Defender:</span> ${x.defenderGoal||"—"}</div>`:(x.goal?`<div class="drill-goal" style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">Goal: ${x.goal}</div>`:"");return`<div class="drill custom">${x.name}${goalHtml}</div>`;}).join("");})()}
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">02</span><span class="seg-title">Technique</span></div><span class="seg-time">15–20 min</span></div>
@@ -283,9 +307,11 @@ function renderPlan(){
 }
 
 function renderLibrary(){
+  const q=state.libSearch.trim().toLowerCase();
   const filtered=state.library.filter(i=>{
     if(state.libFilter.theme&&i.theme!==state.libFilter.theme)return false;
     if(state.libFilter.type&&i.type!==state.libFilter.type)return false;
+    if(q&&!i.name.toLowerCase().includes(q)&&!(i.note||"").toLowerCase().includes(q)&&!(i.goal||"").toLowerCase().includes(q)&&!(i.attackerGoal||"").toLowerCase().includes(q)&&!(i.defenderGoal||"").toLowerCase().includes(q))return false;
     return true;
   });
   const positionalWarn=state.form.type==="positional"&&!state.editId&&libFor(state.form.theme,state.form.subtopic,"positional").length>0;
@@ -321,10 +347,31 @@ function renderLibrary(){
           :`<input class="form-input" type="text" value="${state.form.name.replace(/"/g,"&quot;")}" oninput="setFormField('name',this.value)" placeholder="${state.form.type==="drill"?"e.g. Single leg finish game":"e.g. Penetration step mechanics"}">`
         }
       </div>
-      ${state.form.type!=="positional"?`
+      ${state.form.type==="drill"?`
       <div class="form-row">
-        <label class="form-label">${state.form.type==="drill"?"Winning condition (optional)":"Coaching note (optional)"}</label>
-        <input class="form-input" type="text" value="${state.form.note.replace(/"/g,"&quot;")}" oninput="setFormField('note',this.value)" placeholder="${state.form.type==="drill"?"e.g. Win by completing the finish to the mat":"e.g. Focus on hip position throughout"}">
+        <label class="form-label">Drill structure</label>
+        <div class="type-toggle">
+          <button class="type-opt${state.form.roles==="symmetric"?" on":""}" onclick="setFormField('roles','symmetric')">Same for both players</button>
+          <button class="type-opt${state.form.roles==="asymmetric"?" on":""}" onclick="setFormField('roles','asymmetric')">Attacker &amp; Defender</button>
+        </div>
+      </div>
+      ${state.form.roles==="symmetric"?`
+      <div class="form-row">
+        <label class="form-label">Goal / reset condition</label>
+        <input class="form-input" type="text" value="${state.form.goal.replace(/"/g,"&quot;")}" oninput="setFormField('goal',this.value)" placeholder="e.g. Win by completing the takedown to the mat">
+      </div>`:`
+      <div class="form-row">
+        <label class="form-label">Attacker goal / reset condition</label>
+        <input class="form-input" type="text" value="${state.form.attackerGoal.replace(/"/g,"&quot;")}" oninput="setFormField('attackerGoal',this.value)" placeholder="e.g. Win by completing the takedown">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Defender goal / reset condition</label>
+        <input class="form-input" type="text" value="${state.form.defenderGoal.replace(/"/g,"&quot;")}" oninput="setFormField('defenderGoal',this.value)" placeholder="e.g. Win by defending and returning to neutral">
+      </div>`}
+      `:state.form.type==="technique"?`
+      <div class="form-row">
+        <label class="form-label">Coaching note (optional)</label>
+        <input class="form-input" type="text" value="${state.form.note.replace(/"/g,"&quot;")}" oninput="setFormField('note',this.value)" placeholder="e.g. Focus on hip position throughout">
       </div>`:""}
       <div class="form-btns">
         <button class="cancel-btn" onclick="cancelForm()">Cancel</button>
@@ -334,7 +381,7 @@ function renderLibrary(){
   `:"";
   return`
     <div style="margin-bottom:1rem">
-      <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Filter</p>
+      <input class="form-input" type="search" placeholder="Search library…" value="${state.libSearch.replace(/"/g,'&quot;')}" oninput="setLibSearch(this.value)" style="margin-bottom:10px">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
         ${THEMES.map(t=>`<button class="filter-btn${state.libFilter.theme===t.id?" on":""}" onclick="setLibFilter('theme','${t.id}')">${t.label}</button>`).join("")}
       </div>
@@ -354,7 +401,7 @@ function renderLibrary(){
             <span style="font-size:11px;color:var(--color-text-secondary)">${THEMES.find(t=>t.id===item.theme)?.label} · ${item.subtopic}</span>
           </div>
           <div class="lib-item-name">${item.name}</div>
-          ${item.note?`<div class="lib-item-note">${item.note}</div>`:""}
+          ${item.type==="drill"?(item.roles==="asymmetric"?`<div class="lib-item-note">Attacker: ${item.attackerGoal||"—"}</div><div class="lib-item-note">Defender: ${item.defenderGoal||"—"}</div>`:(item.goal?`<div class="lib-item-note">Goal: ${item.goal}</div>`:"")):item.note?`<div class="lib-item-note">${item.note}</div>`:""}
         </div>
         <div class="lib-actions">
           <button class="icon-btn" onclick="editItem('${item.id}')">Edit</button>
