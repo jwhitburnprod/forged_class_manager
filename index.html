@@ -247,54 +247,62 @@ function saveForm(){
   saveLib();state.showForm=false;state.editId=null;render();
 }
 
+function formatLastUsed(dateStr){
+  if(!dateStr)return"";
+  const days=Math.floor((Date.now()-new Date(dateStr).getTime())/(1000*60*60*24));
+  if(days===0)return"Last used: today";
+  if(days===1)return"Last used: yesterday";
+  if(days<7)return`Last used: ${days} days ago`;
+  if(days<14)return"Last used: 1 week ago";
+  return`Last used: ${Math.floor(days/7)} weeks ago`;
+}
+function logSession(){
+  if(!state.user||!state.theme)return;
+  const now=new Date().toISOString();
+  state.library=state.library.map(i=>i.theme===state.theme?{...i,lastUsed:now}:i);
+  saveLib();render();
+}
+
 function renderPlan(){
-  const block=BLOCKS.find(b=>b.id===state.block);
-  const sub=state.theme?block.subtopics[state.theme]:null;
-  const def=state.theme?DEFAULTS[state.theme]?.[sub]:null;
   const themeLabel=state.theme?THEMES.find(t=>t.id===state.theme).label:null;
-  const standingSub=block.subtopics.standing;
-  const getDrills=()=>{const c=libFor(state.theme,sub,"drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
-  const getTechs=()=>{const c=libFor(state.theme,sub,"technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
-  const getPos=()=>{const c=libFor(state.theme,sub,"positional");return c.length?{text:c[0].name,isDefault:false}:{text:def?.positional||"",isDefault:true};};
+  const firstSub=state.theme?SUBTOPICS[state.theme][0]:null;
+  const def=state.theme?DEFAULTS[state.theme]?.[firstSub]:null;
+  const getDrills=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
+  const getTechs=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
+  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{text:c[0].name,isDefault:false}:{text:def?.positional||"",isDefault:true};};
   return`
-    <div style="margin-bottom:1.5rem">
-      <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Current block</p>
-      <div style="display:flex;gap:8px">
-        ${BLOCKS.map(b=>`<button class="blk-btn${state.block===b.id?" on":""}" onclick="setBlock(${b.id})"><div style="font-size:14px;font-weight:500">Block ${b.id}</div><div class="blk-sub">Weeks ${b.weeks}</div></button>`).join("")}
-      </div>
-      <div style="margin-top:8px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
-        ${THEMES.map(t=>`<span class="pill">${t.label}: ${block.subtopics[t.id]}</span>`).join("")}
-      </div>
-    </div>
     <div style="margin-bottom:1.5rem">
       <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Today's theme</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${THEMES.map(t=>`<button class="theme-btn${state.theme===t.id?" on":""}" onclick="setTheme('${t.id}')"><div>${t.label}</div><div class="theme-sub">${block.subtopics[t.id]}</div></button>`).join("")}
+        ${THEMES.map(t=>`<button class="theme-btn${state.theme===t.id?" on":""}" onclick="setTheme('${t.id}')">${t.label}</button>`).join("")}
       </div>
     </div>
-    ${state.theme&&sub?`
+    ${state.theme?`
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session plan</p>
-          <button class="print-btn" onclick="window.print()">Print</button>
+          <div style="display:flex;gap:6px">
+            ${state.user?`<button class="print-btn" onclick="logSession()">Log session</button>`:""}
+            <button class="print-btn" onclick="window.print()">Print</button>
+          </div>
         </div>
         <div class="print-header" style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #ccc">
           <div style="font-size:14pt;font-weight:700">Forged Grappling</div>
           <div style="font-size:10pt;color:#555">${new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
         </div>
         <div style="background:#EAF3DE;border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:8px;border:0.5px solid #C0DD97">
-          <div style="font-size:16px;font-weight:500;color:#27500A">${themeLabel} — ${sub}</div>
-          <div style="font-size:12px;color:#3B6D11;margin-top:2px">Block ${state.block} · 60 minutes</div>
+          <div style="font-size:16px;font-weight:500;color:#27500A">${themeLabel}</div>
+          <div style="font-size:12px;color:#3B6D11;margin-top:2px">60 minutes</div>
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">01</span><span class="seg-title">Dynamic drills</span></div><span class="seg-time">15–20 min</span></div>
-          ${state.theme!=="standing"?`<p class="lbl">Standup opener (always)</p><div class="drill standup">${STANDING_OPENER[standingSub]} <span style="font-size:11px;color:#639922">[${standingSub}]</span></div><p class="lbl" style="margin-top:10px">Theme drills — ${themeLabel}</p>`:`<p class="lbl">Standing drills</p>`}
+          <p class="lbl">Drills</p>
           ${(()=>{const d=getDrills();if(d.isDefault)return d.defaults.map(x=>`<div class="drill">${x}</div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return d.items.map(x=>{const goalHtml=x.roles==="asymmetric"?`<div class="drill-roles" style="font-size:11px;margin-top:3px"><span style="color:#639922">Attacker:</span> ${x.attackerGoal||"—"} &nbsp;·&nbsp; <span style="color:#639922">Defender:</span> ${x.defenderGoal||"—"}</div>`:(x.goal?`<div class="drill-goal" style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">Goal: ${x.goal}</div>`:"");return`<div class="drill custom">${x.name}${goalHtml}</div>`;}).join("");})()}
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">02</span><span class="seg-title">Technique</span></div><span class="seg-time">15–20 min</span></div>
           <p class="lbl">Techniques — solving problems from the drills</p>
-          ${(()=>{const t=getTechs();if(t.isDefault)return t.defaults.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x}</span></div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return t.items.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x.name}${x.note?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.note}</div>`:""}</span></div>`).join("");})()}
+          ${(()=>{const t=getTechs();if(t.isDefault)return t.defaults.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x}</span></div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return t.items.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x.name}${x.note?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.note}</div>`:""}${x.lastUsed?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${formatLastUsed(x.lastUsed)}</div>`:""}</span></div>`).join("");})()}
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
@@ -408,6 +416,7 @@ function renderLibrary(){
           </div>
           <div class="lib-item-name">${item.name}</div>
           ${item.type==="drill"?(item.roles==="asymmetric"?`<div class="lib-item-note">Attacker: ${item.attackerGoal||"—"}</div><div class="lib-item-note">Defender: ${item.defenderGoal||"—"}</div>`:(item.goal?`<div class="lib-item-note">Goal: ${item.goal}</div>`:"")):item.note?`<div class="lib-item-note">${item.note}</div>`:""}
+          ${item.type==="technique"&&item.lastUsed?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px">${formatLastUsed(item.lastUsed)}</div>`:""}
         </div>
         ${state.user?`<div class="lib-actions">
           <button class="icon-btn" onclick="editItem('${item.id}')">Edit</button>
