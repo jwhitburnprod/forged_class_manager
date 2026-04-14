@@ -241,7 +241,6 @@ function saveForm(){
   if(state.editId){
     state.library=state.library.map(i=>i.id===state.editId?{...i,...item}:i);
   }else{
-    if(state.form.type==="positional"){state.library=state.library.filter(i=>!(i.theme===state.form.theme&&i.type==="positional"));}
     state.library.push({id:uid(),...item});
   }
   saveLib();state.showForm=false;state.editId=null;render();
@@ -269,7 +268,7 @@ function renderPlan(){
   const def=state.theme?DEFAULTS[state.theme]?.[firstSub]:null;
   const getDrills=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
   const getTechs=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
-  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{name:c[0].name,desc:c[0].note||"",isDefault:false}:{name:"",desc:def?.positional||"",isDefault:true};};
+  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,desc:def?.positional||""};};
   return`
     <div style="margin-bottom:1.5rem">
       <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Today's theme</p>
@@ -307,7 +306,7 @@ function renderPlan(){
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
           <p class="lbl">Positional setup</p>
-          ${(()=>{const p=getPos();return`<div class="pos-box${p.isDefault?"":" custom"}" style="${p.isDefault?"":"border-left:2px solid #3B6D11;border-radius:0"}">${p.isDefault?p.desc:`${p.name?`<div style="font-weight:500;margin-bottom:${p.desc?"4px":"0"}">${p.name}</div>`:""}${p.desc?`<div style="font-size:12px">${p.desc}</div>`:""}`}</div>${p.isDefault?`<div class="default-note">Using default — load and edit in Library tab</div>`:""}`})()}
+          ${(()=>{const p=getPos();if(p.isDefault)return`<div class="pos-box">${p.desc}</div><div class="default-note">Using default — load and edit in Library tab</div>`;return p.items.map(x=>`<div class="pos-box custom" style="border-left:2px solid #3B6D11;border-radius:0;margin-bottom:6px">${x.name?`<div style="font-weight:500;margin-bottom:${x.note?"4px":"0"}">${x.name}</div>`:""}${x.note?`<div style="font-size:12px">${x.note}</div>`:""}</div>`).join("");})()}
           <p class="lbl" style="margin-top:8px">Free rolling</p>
           <div class="pos-box">Unrestricted rolling. Submissions on. Emphasis on positional dominance.</div>
         </div>
@@ -328,7 +327,7 @@ function renderLibrary(){
     if(q&&!i.name.toLowerCase().includes(q)&&!(i.note||"").toLowerCase().includes(q)&&!(i.goal||"").toLowerCase().includes(q)&&!(i.attackerGoal||"").toLowerCase().includes(q)&&!(i.defenderGoal||"").toLowerCase().includes(q))return false;
     return true;
   });
-  const positionalWarn=state.form.type==="positional"&&!state.editId&&state.library.filter(i=>i.theme===state.form.theme&&i.type==="positional").length>0;
+  const positionalWarn=false;
   const allLoaded=!THEMES.some(t=>SUBTOPICS[t.id].some(s=>hasDefaults(t.id,s)));
   const formHtml=state.showForm?`
     <div class="form-card">
