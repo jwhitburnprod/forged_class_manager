@@ -14,7 +14,7 @@ const auth = firebase.auth();
 const LIBRARY_DOC = db.collection("fg_app").doc("library");
 
 // ── APP ───────────────────────────────────────────────────────────────────────
-const THEMES=[{id:"standing",label:"Standing"},{id:"legs",label:"Legs"},{id:"guard",label:"Guard"},{id:"passing",label:"Passing"},{id:"pins",label:"Pins"}];
+const THEMES=[{id:"standing",label:"Standing"},{id:"legs",label:"Legs"},{id:"guard",label:"Guard"},{id:"passing",label:"Passing"},{id:"pins",label:"Pins"},{id:"full-sparring",label:"Full Sparring"}];
 
 let state={tab:"plan",theme:null,session:{drills:[],techniques:[],positionals:[]},sessionNotes:"",libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
 
@@ -108,6 +108,9 @@ function renderPlan(){
   function slotOpts(type){
     if(type==="drills"){
       return state.library.filter(i=>i.type==="drill"&&(i.theme===state.theme||i.theme==="standing"));
+    }
+    if(type==="positionals"){
+      return state.library.filter(i=>i.type==="positional"&&(i.theme===state.theme||i.theme==="full-sparring"));
     }
     return state.library.filter(i=>i.theme===state.theme&&i.type===typeLabel[type]);
   }
