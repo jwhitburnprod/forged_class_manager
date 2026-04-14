@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forged Grappling — Session Manager</title>
+<style>
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f5f4;
+    --color-background-tertiary: #e8e8e6;
+    --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b67;
+    --color-border-tertiary: rgba(0,0,0,0.12);
+    --color-border-secondary: rgba(0,0,0,0.22);
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1e1e1c;
+      --color-background-secondary: #2a2a28;
+      --color-background-tertiary: #333331;
+      --color-text-primary: #f0ede8;
+      --color-text-secondary: #9a9a94;
+      --color-border-tertiary: rgba(255,255,255,0.1);
+      --color-border-secondary: rgba(255,255,255,0.18);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); background: var(--color-background-primary); color: var(--color-text-primary); padding: 0; }
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .tab-bar{display:flex;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;margin-bottom:1.5rem}
+  .tab{flex:1;padding:10px;background:var(--color-background-secondary);border:none;cursor:pointer;font-family:var(--font-sans);font-size:14px;color:var(--color-text-secondary);font-weight:400;transition:background .15s;border-right:0.5px solid var(--color-border-tertiary)}
+  .tab:last-child{border-right:none}
+  .tab.on{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500}
+  .blk-btn{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px;cursor:pointer;font-family:var(--font-sans);color:var(--color-text-primary);flex:1;text-align:center;transition:background .15s}
+  .blk-btn:hover,.theme-btn:hover,.filter-btn:hover{background:var(--color-background-tertiary)}
+  .blk-btn.on{background:#EAF3DE;border-color:#639922;color:#27500A}
+  .blk-sub{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
+  .blk-btn.on .blk-sub{color:#3B6D11}
+  .theme-btn{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:14px 12px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--color-text-primary);text-align:left;transition:background .15s}
+  .theme-btn.on{background:#EAF3DE;border-color:#639922;color:#27500A}
+  .theme-sub{font-size:12px;color:var(--color-text-secondary);margin-top:3px;font-weight:400}
+  .theme-btn.on .theme-sub{color:#3B6D11}
+  .seg{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:8px}
+  .seg-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .seg-num{font-size:11px;font-weight:500;color:#639922}
+  .seg-title{font-size:15px;font-weight:500;color:var(--color-text-primary);margin-left:8px}
+  .seg-time{font-size:12px;color:var(--color-text-secondary)}
+  .lbl{font-size:11px;color:var(--color-text-secondary);margin:0 0 6px}
+  .drill{background:var(--color-background-secondary);border-left:2px solid #639922;padding:8px 10px;font-size:13px;color:var(--color-text-primary);margin-bottom:5px;border-radius:0}
+  .drill.standup{border-color:#97C459}
+  .drill.custom{border-color:#3B6D11}
+  .tech-row{display:flex;gap:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:13px;color:var(--color-text-primary);margin-bottom:5px}
+  .tech-n{color:#639922;font-weight:500;min-width:16px}
+  .pos-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:13px;color:var(--color-text-primary);margin-bottom:6px}
+  .pill{display:inline-block;background:#EAF3DE;border-radius:20px;padding:3px 10px;font-size:11px;color:#3B6D11;margin:2px}
+  .print-btn{background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 14px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;font-family:var(--font-sans)}
+  .close-row{display:flex;justify-content:space-between;align-items:center;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 16px;margin-top:4px}
+  .filter-btn{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;font-family:var(--font-sans);transition:background .15s}
+  .filter-btn.on{background:#EAF3DE;border-color:#639922;color:#3B6D11}
+  .lib-item{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .lib-item-name{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+  .lib-item-note{font-size:12px;color:var(--color-text-secondary);margin-top:4px;font-style:italic}
+  .lib-actions{display:flex;gap:4px;flex-shrink:0}
+  .icon-btn{background:transparent;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:5px 8px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;font-family:var(--font-sans);transition:background .15s}
+  .icon-btn:hover{background:var(--color-background-secondary)}
+  .icon-btn.del:hover{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+  .add-btn{width:100%;padding:12px;background:transparent;border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-secondary);cursor:pointer;margin-top:6px;transition:background .15s}
+  .add-btn:hover{background:var(--color-background-secondary)}
+  .load-btn{width:100%;padding:10px;background:transparent;border:0.5px solid #C0DD97;border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:13px;color:#3B6D11;cursor:pointer;margin-top:6px;transition:background .15s}
+  .load-btn:hover{background:#EAF3DE}
+  .form-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:12px}
+  .form-row{margin-bottom:12px}
+  .form-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:5px;display:block}
+  .form-input{width:100%;padding:8px 10px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+  .form-input:focus{outline:none;border-color:#639922}
+  .form-textarea{width:100%;padding:8px 10px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);resize:vertical;min-height:70px}
+  .form-textarea:focus{outline:none;border-color:#639922}
+  .type-toggle{display:flex;gap:8px}
+  .type-opt{flex:1;padding:8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:13px;color:var(--color-text-secondary);cursor:pointer;text-align:center;transition:background .15s}
+  .type-opt.on{background:#EAF3DE;border-color:#639922;color:#3B6D11;font-weight:500}
+  .form-select{width:100%;padding:8px 10px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary)}
+  .form-btns{display:flex;gap:8px;margin-top:16px}
+  .save-btn{flex:1;padding:10px;background:#EAF3DE;border:0.5px solid #639922;border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:#27500A;font-weight:500;cursor:pointer}
+  .cancel-btn{padding:10px 16px;background:transparent;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-secondary);cursor:pointer}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;margin-right:4px}
+  .badge-drill{background:#E6F1FB;color:#185FA5}
+  .badge-technique{background:#EAF3DE;color:#3B6D11}
+  .badge-positional{background:#FAEEDA;color:#633806}
+  .default-note{font-size:11px;color:var(--color-text-secondary);font-style:italic;margin-top:4px;padding:6px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)}
+  .warn-box{font-size:12px;color:#633806;background:#FAEEDA;border-radius:var(--border-radius-md);padding:6px 10px;margin-bottom:10px}
+  @media print {
+    body { background: white; }
+    .tab-bar, .print-btn, .lib-actions, .add-btn, .load-btn { display: none !important; }
+  }
+</style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────────
+  // Get this from: Firebase Console → Your Project → Project Settings → Your apps
+  const firebaseConfig = {
+    apiKey: "AIzaSyAaq7ww822sBHaEG8J39KxWD-AzkGdj6Og",
+    authDomain: "forged-grappling.firebaseapp.com",
+    projectId: "forged-grappling",
+    storageBucket: "forged-grappling.firebasestorage.app",
+    messagingSenderId: "107502360615",
+    appId: "1:107502360615:web:d0b78a7d05b74fda709602",
+    measurementId: "G-HK68N7YPLH"
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const LIBRARY_DOC = db.collection("fg_app").doc("library");
+</script>
+</head>
+<body>
+<h2 class="sr-only">Forged Grappling session manager — plan sessions and manage coach library</h2>
+<div style="padding:1rem;max-width:480px;margin:0 auto" id="app"></div>
+
+<script>
+const BLOCKS=[
+  {id:1,weeks:"1–4",subtopics:{standing:"Unconnected",guard:"Outside",passing:"Outside",legs:"Outside",pins:"Chest-to-chest"}},
+  {id:2,weeks:"5–8",subtopics:{standing:"Connected",guard:"Inside",passing:"Inside",legs:"Inside",pins:"Chest-to-back"}},
+  {id:3,weeks:"9–12",subtopics:{standing:"Scramble",guard:"Neutral",passing:"Neutral",legs:"Neutral",pins:"Filler"}}
+];
+const THEMES=[{id:"standing",label:"Standing"},{id:"legs",label:"Legs"},{id:"guard",label:"Guard"},{id:"passing",label:"Passing"},{id:"pins",label:"Pins"}];
+const SUBTOPICS={standing:["Unconnected","Connected","Scramble"],guard:["Outside","Inside","Neutral"],passing:["Outside","Inside","Neutral"],legs:["Outside","Inside","Neutral"],pins:["Chest-to-chest","Chest-to-back","Filler"]};
+
+const DEFAULTS={
+  standing:{
+    Unconnected:{drills:["Penetration step game — win by completing a shot attempt on partner","Stance & footwork mirror drill — win by breaking partner's stance or level"],techniques:["Penetration step mechanics & finishing the single leg","Double leg setup from a level change","Sprawl defence & returning to neutral"],positional:"Start unconnected at wrestling distance. Win = completed takedown or forcing a guard pull."},
+    Connected:{drills:["Grip fighting game — win by establishing inside grip control","Clinch game — win by completing a trip, hip throw, or significant off-balance"],techniques:["Inside grip fighting mechanics","Body lock takedown or trip from the clinch","Seatbelt to back from a failed takedown attempt"],positional:"Start in the clinch. Win = takedown completed or achieving a dominant back position."},
+    Scramble:{drills:["Scramble recovery game — start from a failed shot, win by regaining base or reversing","Re-shot game — win by either athlete re-establishing dominant control from chaos"],techniques:["Re-shot mechanics after a failed single leg","Scramble to back or turtle from a failed shot","Standing back up safely under pressure"],positional:"Both athletes start on all fours. Win = first to a recognised dominant position."}
+  },
+  guard:{
+    Outside:{drills:["DLR / shin-on-shin retention game — win by maintaining the position for 10s or sweeping","Lasso / spider control game — win by breaking posture or threatening a sweep"],techniques:["DLR entry mechanics & basic sweep","Shin-on-shin to single leg transition","Outside guard retention under passing pressure"],positional:"Start in outside guard. Passer wins = clean pass. Guard player wins = sweep or back take."},
+    Inside:{drills:["Closed guard posture game — passer wins by breaking guard, guard player wins by maintaining for 20s","Half guard recovery game — win by securing the underhook or recovering full guard"],techniques:["Closed guard: hip movement & off-balancing the passer","Half guard: fighting for and securing the underhook","Butterfly guard: basic lift sweep mechanics"],positional:"Start in closed or half guard. Standard positional rules apply."},
+    Neutral:{drills:["50/50 battle game — win by taking the back or completing a submission entry","Ashi garami entry game — win by achieving and holding ashi control for 5s"],techniques:["50/50 position: inside heel concept & control hierarchy","Ashi garami entry from guard","Transitioning from guard to leg entanglements"],positional:"Start seated facing each other. Submissions and leg entries on."}
+  },
+  passing:{
+    Outside:{drills:["Torreando / bullfighter game — win by achieving a clean leg pin and knee cut entry","Leg pin retention game — win by holding the pin for 5s or recovering guard"],techniques:["Torreando footwork & timing","Bullfighter to knee cut entry transition","Outside leg weave mechanics"],positional:"Passer starts standing, guard player seated. Passer wins = side control. Guard wins = full guard recovery."},
+    Inside:{drills:["Over-under pressure game — passer wins by completing smash pass, guard player wins by recovering","Headquarters (HQ) battle — win by passing or returning to full guard"],techniques:["Over-under grip & generating pressure mechanics","Smash pass from headquarters position","Dealing with the underhook from HQ"],positional:"Start in over-under or HQ. Standard pass / guard retention rules."},
+    Neutral:{drills:["Float passing game — win by clearing all legs and achieving side control without committing","Transition passing game — start mid-pass, win by completing or recovering"],techniques:["Floating pass mechanics: staying above without committing","Passing through entanglements without engaging leg locks","Reading and reacting to guard transitions mid-pass"],positional:"Start mid-pass with passer above. Passer wins = clean pass. Guard wins = full guard recovery."}
+  },
+  legs:{
+    Outside:{drills:["Single leg X (SLX) entry game — win by controlling for 5s or sweeping","Outside heel hook entry game — win by achieving the position (finish at coach's discretion)"],techniques:["Single leg X: entry mechanics & sweep","Outside heel hook: entry mechanics & finishing","Defending outside heel hook attempts"],positional:"Start seated. Leg entries open. Tap for heel hooks as directed by coach."},
+    Inside:{drills:["Ashi garami dominance game — win by maintaining inside position or completing a submission","Inside heel hook entry game — win by completing the entry (finish at coach's discretion)"],techniques:["Ashi garami: inside position dominance & heel hook finish","Inside heel hook: mechanics & safe practice protocol","Toe hold from ashi garami"],positional:"Start in ashi garami. Inside heel hooks tapped or demonstrated per coach's call."},
+    Neutral:{drills:["Kneebar entry game — win by completing entry from top or passing position","Calf slicer entry game — win by securing the calf slicer position"],techniques:["Kneebar entry from top passing position","Calf slicer mechanics & finishing","Reading available leg attacks from neutral"],positional:"Start from top passing or turtle. Look for available leg entries. Finish at coach's discretion."}
+  },
+  pins:{
+    "Chest-to-chest":{drills:["Mount maintenance game — win by holding mount for 20s or completing a submission entry","Side control retention game — win by maintaining pin for 15s against full escape attempts"],techniques:["Mount: controlling hip movement & climbing to high mount","Side control: pressure points & transitioning to north-south","Submission from chest-to-chest (coach's choice)"],positional:"Start in mount or side control. Defender wins = escape. Attacker wins = 30s held or submission."},
+    "Chest-to-back":{drills:["Back control retention game — win by maintaining seatbelt for 20s or sinking a hook","Turtle top game — win by rolling to back control or flattening to a pin"],techniques:["Back control: body triangle vs double hooks","Rear naked choke mechanics & finishing","Turtle top: taking the back or flattening to a pin"],positional:"Start with one athlete on back, other controlling. Defender wins = escape to guard or neutral."},
+    Filler:{drills:["Pin transition game — win by chaining two different pins without losing position","Escape chain game — win by recovering guard from any starting pin"],techniques:["Transitioning between pins: side control → mount → back","Escape mechanics: bridge & roll, elbow-knee, guard recovery","Coach's choice — address gaps from the week"],positional:"Start in coach's chosen pin. Win = 3 linked pins without escape, or escape to guard."}
+  }
+};
+
+const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
+
+let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},library:[],loading:true,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected"}};
+
+// Firestore: real-time listener — updates all devices automatically
+function init(){
+  LIBRARY_DOC.onSnapshot(
+    doc=>{
+      state.library=doc.exists?(doc.data().items||[]):[];
+      state.loading=false;render();
+    },
+    err=>{
+      console.error("Firestore error:",err);
+      state.loading=false;render();
+    }
+  );
+}
+// Firestore: save the whole library array as a single document field
+function saveLib(){LIBRARY_DOC.set({items:state.library}).catch(e=>console.error("Save error:",e));}
+
+function libFor(theme,subtopic,type){return state.library.filter(i=>i.theme===theme&&i.subtopic===subtopic&&i.type===type);}
+function hasDefaults(theme,subtopic){
+  const d=DEFAULTS[theme]?.[subtopic];if(!d)return false;
+  return!(libFor(theme,subtopic,"drill").length>0&&libFor(theme,subtopic,"technique").length>0&&libFor(theme,subtopic,"positional").length>0);
+}
+function loadDefaults(theme,subtopic){
+  const d=DEFAULTS[theme]?.[subtopic];if(!d)return;
+  if(!libFor(theme,subtopic,"drill").length)d.drills.forEach(x=>state.library.push({id:uid(),name:x,note:"",type:"drill",theme,subtopic}));
+  if(!libFor(theme,subtopic,"technique").length)d.techniques.forEach(x=>state.library.push({id:uid(),name:x,note:"",type:"technique",theme,subtopic}));
+  if(!libFor(theme,subtopic,"positional").length)state.library.push({id:uid(),name:d.positional,note:"",type:"positional",theme,subtopic});
+  saveLib();render();
+}
+function loadAllDefaults(){THEMES.forEach(t=>SUBTOPICS[t.id].forEach(s=>loadDefaults(t.id,s)));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function setBlock(id){state.block=id;state.theme=null;render();}
+function setTheme(id){state.theme=state.theme===id?null:id;render();}
+function setTab(t){state.tab=t;render();}
+function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
+function showAddForm(overrides={}){
+  const defTheme=state.libFilter.theme||"standing";
+  state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,subtopic:SUBTOPICS[defTheme][0],...overrides};
+  state.editId=null;state.showForm=true;render();
+}
+function editItem(id){
+  const item=state.library.find(i=>i.id===id);if(!item)return;
+  state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,subtopic:item.subtopic};
+  state.editId=id;state.showForm=true;render();
+}
+function deleteItem(id){state.library=state.library.filter(i=>i.id!==id);saveLib();render();}
+function cancelForm(){state.showForm=false;state.editId=null;render();}
+function setFormField(k,v){state.form[k]=v;if(k==="theme")state.form.subtopic=SUBTOPICS[v][0];if(k!=="name"&&k!=="note")render();}
+function saveForm(){
+  if(!state.form.name.trim())return;
+  if(state.editId){
+    state.library=state.library.map(i=>i.id===state.editId?{...i,...state.form,name:state.form.name.trim(),note:state.form.note.trim()}:i);
+  }else{
+    if(state.form.type==="positional"){state.library=state.library.filter(i=>!(i.theme===state.form.theme&&i.subtopic===state.form.subtopic&&i.type==="positional"));}
+    state.library.push({id:uid(),name:state.form.name.trim(),note:state.form.note.trim(),type:state.form.type,theme:state.form.theme,subtopic:state.form.subtopic});
+  }
+  saveLib();state.showForm=false;state.editId=null;render();
+}
+
+function renderPlan(){
+  const block=BLOCKS.find(b=>b.id===state.block);
+  const sub=state.theme?block.subtopics[state.theme]:null;
+  const def=state.theme?DEFAULTS[state.theme]?.[sub]:null;
+  const themeLabel=state.theme?THEMES.find(t=>t.id===state.theme).label:null;
+  const standingSub=block.subtopics.standing;
+  const getDrills=()=>{const c=libFor(state.theme,sub,"drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
+  const getTechs=()=>{const c=libFor(state.theme,sub,"technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
+  const getPos=()=>{const c=libFor(state.theme,sub,"positional");return c.length?{text:c[0].name,isDefault:false}:{text:def?.positional||"",isDefault:true};};
+  return`
+    <div style="margin-bottom:1.5rem">
+      <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Current block</p>
+      <div style="display:flex;gap:8px">
+        ${BLOCKS.map(b=>`<button class="blk-btn${state.block===b.id?" on":""}" onclick="setBlock(${b.id})"><div style="font-size:14px;font-weight:500">Block ${b.id}</div><div class="blk-sub">Weeks ${b.weeks}</div></button>`).join("")}
+      </div>
+      <div style="margin-top:8px;padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary)">
+        ${THEMES.map(t=>`<span class="pill">${t.label}: ${block.subtopics[t.id]}</span>`).join("")}
+      </div>
+    </div>
+    <div style="margin-bottom:1.5rem">
+      <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Today's theme</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${THEMES.map(t=>`<button class="theme-btn${state.theme===t.id?" on":""}" onclick="setTheme('${t.id}')"><div>${t.label}</div><div class="theme-sub">${block.subtopics[t.id]}</div></button>`).join("")}
+      </div>
+    </div>
+    ${state.theme&&sub?`
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session plan</p>
+          <button class="print-btn" onclick="window.print()">Print</button>
+        </div>
+        <div style="background:#EAF3DE;border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:8px;border:0.5px solid #C0DD97">
+          <div style="font-size:16px;font-weight:500;color:#27500A">${themeLabel} — ${sub}</div>
+          <div style="font-size:12px;color:#3B6D11;margin-top:2px">Block ${state.block} · 60 minutes</div>
+        </div>
+        <div class="seg">
+          <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">01</span><span class="seg-title">Dynamic drills</span></div><span class="seg-time">15–20 min</span></div>
+          ${state.theme!=="standing"?`<p class="lbl">Standup opener (always)</p><div class="drill standup">${STANDING_OPENER[standingSub]} <span style="font-size:11px;color:#639922">[${standingSub}]</span></div><p class="lbl" style="margin-top:10px">Theme drills — ${themeLabel}</p>`:`<p class="lbl">Standing drills</p>`}
+          ${(()=>{const d=getDrills();if(d.isDefault)return d.defaults.map(x=>`<div class="drill">${x}</div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return d.items.map(x=>`<div class="drill custom">${x.name}${x.note?` <span style="font-size:12px;color:#639922">— ${x.note}</span>`:""}</div>`).join("");})()}
+        </div>
+        <div class="seg">
+          <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">02</span><span class="seg-title">Technique</span></div><span class="seg-time">15–20 min</span></div>
+          <p class="lbl">Techniques — solving problems from the drills</p>
+          ${(()=>{const t=getTechs();if(t.isDefault)return t.defaults.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x}</span></div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return t.items.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x.name}${x.note?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.note}</div>`:""}</span></div>`).join("");})()}
+        </div>
+        <div class="seg">
+          <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
+          <p class="lbl">Positional setup</p>
+          ${(()=>{const p=getPos();return`<div class="pos-box${p.isDefault?"":" custom"}" style="${p.isDefault?"":"border-left:2px solid #3B6D11;border-radius:0"}">${p.text}</div>${p.isDefault?`<div class="default-note">Using default — load and edit in Library tab</div>`:""}`})()}
+          <p class="lbl" style="margin-top:8px">Free rolling</p>
+          <div class="pos-box">Unrestricted rolling. Submissions on. Emphasis on positional dominance.</div>
+        </div>
+        <div class="close-row">
+          <div><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Close-out</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">Q&A · coach notes · photos</div></div>
+          <span style="font-size:13px;color:#639922;font-weight:500">5 min</span>
+        </div>
+      </div>
+    `:`<div style="text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px">Select a theme above to generate today's session plan</div>`}
+  `;
+}
+
+function renderLibrary(){
+  const filtered=state.library.filter(i=>{
+    if(state.libFilter.theme&&i.theme!==state.libFilter.theme)return false;
+    if(state.libFilter.type&&i.type!==state.libFilter.type)return false;
+    return true;
+  });
+  const positionalWarn=state.form.type==="positional"&&!state.editId&&libFor(state.form.theme,state.form.subtopic,"positional").length>0;
+  const allLoaded=!THEMES.some(t=>SUBTOPICS[t.id].some(s=>hasDefaults(t.id,s)));
+  const formHtml=state.showForm?`
+    <div class="form-card">
+      <p style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin:0 0 14px">${state.editId?"Edit item":"Add to library"}</p>
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <div class="type-toggle">
+          <button class="type-opt${state.form.type==="drill"?" on":""}" onclick="setFormField('type','drill')">Drill</button>
+          <button class="type-opt${state.form.type==="technique"?" on":""}" onclick="setFormField('type','technique')">Technique</button>
+          <button class="type-opt${state.form.type==="positional"?" on":""}" onclick="setFormField('type','positional')">Positional</button>
+        </div>
+      </div>
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label class="form-label">Theme</label>
+          <select class="form-select" onchange="setFormField('theme',this.value)">
+            ${THEMES.map(t=>`<option value="${t.id}"${state.form.theme===t.id?" selected":""}>${t.label}</option>`).join("")}
+          </select>
+        </div>
+        <div><label class="form-label">Sub-topic</label>
+          <select class="form-select" onchange="setFormField('subtopic',this.value)">
+            ${SUBTOPICS[state.form.theme].map(s=>`<option value="${s}"${state.form.subtopic===s?" selected":""}>${s}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      ${positionalWarn?`<div class="warn-box">A positional already exists for ${THEMES.find(t=>t.id===state.form.theme)?.label} / ${state.form.subtopic} — saving will replace it.</div>`:""}
+      <div class="form-row">
+        <label class="form-label">${state.form.type==="positional"?"Setup description":"Name"}</label>
+        ${state.form.type==="positional"
+          ?`<textarea class="form-textarea" oninput="setFormField('name',this.value)" placeholder="Describe the starting position and winning conditions...">${state.form.name}</textarea>`
+          :`<input class="form-input" type="text" value="${state.form.name.replace(/"/g,"&quot;")}" oninput="setFormField('name',this.value)" placeholder="${state.form.type==="drill"?"e.g. Single leg finish game":"e.g. Penetration step mechanics"}">`
+        }
+      </div>
+      ${state.form.type!=="positional"?`
+      <div class="form-row">
+        <label class="form-label">${state.form.type==="drill"?"Winning condition (optional)":"Coaching note (optional)"}</label>
+        <input class="form-input" type="text" value="${state.form.note.replace(/"/g,"&quot;")}" oninput="setFormField('note',this.value)" placeholder="${state.form.type==="drill"?"e.g. Win by completing the finish to the mat":"e.g. Focus on hip position throughout"}">
+      </div>`:""}
+      <div class="form-btns">
+        <button class="cancel-btn" onclick="cancelForm()">Cancel</button>
+        <button class="save-btn" onclick="saveForm()">Save to library</button>
+      </div>
+    </div>
+  `:"";
+  return`
+    <div style="margin-bottom:1rem">
+      <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Filter</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        ${THEMES.map(t=>`<button class="filter-btn${state.libFilter.theme===t.id?" on":""}" onclick="setLibFilter('theme','${t.id}')">${t.label}</button>`).join("")}
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="filter-btn${state.libFilter.type==="drill"?" on":""}" onclick="setLibFilter('type','drill')">Drills</button>
+        <button class="filter-btn${state.libFilter.type==="technique"?" on":""}" onclick="setLibFilter('type','technique')">Techniques</button>
+        <button class="filter-btn${state.libFilter.type==="positional"?" on":""}" onclick="setLibFilter('type','positional')">Positional</button>
+      </div>
+    </div>
+    ${formHtml}
+    ${filtered.length===0&&!state.showForm?`<div style="text-align:center;padding:32px 20px;color:var(--color-text-secondary);font-size:13px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">${state.library.length===0?"Library is empty — load defaults or add your own below":"No items match this filter"}</div>`:""}
+    ${filtered.map(item=>`
+      <div class="lib-item">
+        <div style="flex:1">
+          <div style="margin-bottom:4px">
+            <span class="badge badge-${item.type}">${item.type}</span>
+            <span style="font-size:11px;color:var(--color-text-secondary)">${THEMES.find(t=>t.id===item.theme)?.label} · ${item.subtopic}</span>
+          </div>
+          <div class="lib-item-name">${item.name}</div>
+          ${item.note?`<div class="lib-item-note">${item.note}</div>`:""}
+        </div>
+        <div class="lib-actions">
+          <button class="icon-btn" onclick="editItem('${item.id}')">Edit</button>
+          <button class="icon-btn del" onclick="deleteItem('${item.id}')">Del</button>
+        </div>
+      </div>
+    `).join("")}
+    ${!state.showForm?`
+      <button class="add-btn" onclick="showAddForm()">+ Add drill, technique, or positional</button>
+      ${!allLoaded?`<button class="load-btn" onclick="loadAllDefaults()">Load all defaults into library for editing</button>`:""}
+    `:""}
+  `;
+}
+
+function render(){
+  if(state.loading){document.getElementById("app").innerHTML=`<div style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:13px">Loading...</div>`;return;}
+  document.getElementById("app").innerHTML=`
+    <div class="tab-bar">
+      <button class="tab${state.tab==="plan"?" on":""}" onclick="setTab('plan')">Session plan</button>
+      <button class="tab${state.tab==="library"?" on":""}" onclick="setTab('library')">Coach library${state.library.length?" ("+state.library.length+")":""}</button>
+    </div>
+    ${state.tab==="plan"?renderPlan():renderLibrary()}
+  `;
+}
+init();
+</script>
+</body>
+</html>
