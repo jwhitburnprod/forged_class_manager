@@ -143,45 +143,9 @@
 <div style="padding:1rem;max-width:480px;margin:0 auto" id="app"></div>
 
 <script>
-const BLOCKS=[
-  {id:1,weeks:"1–4",subtopics:{standing:"Unconnected",guard:"Outside",passing:"Outside",legs:"Outside",pins:"Chest-to-chest"}},
-  {id:2,weeks:"5–8",subtopics:{standing:"Connected",guard:"Inside",passing:"Inside",legs:"Inside",pins:"Chest-to-back"}},
-  {id:3,weeks:"9–12",subtopics:{standing:"Scramble",guard:"Neutral",passing:"Neutral",legs:"Neutral",pins:"Filler"}}
-];
 const THEMES=[{id:"standing",label:"Standing"},{id:"legs",label:"Legs"},{id:"guard",label:"Guard"},{id:"passing",label:"Passing"},{id:"pins",label:"Pins"}];
-const SUBTOPICS={standing:["Unconnected","Connected","Scramble"],guard:["Outside","Inside","Neutral"],passing:["Outside","Inside","Neutral"],legs:["Outside","Inside","Neutral"],pins:["Chest-to-chest","Chest-to-back","Filler"]};
 
-const DEFAULTS={
-  standing:{
-    Unconnected:{drills:["Penetration step game — win by completing a shot attempt on partner","Stance & footwork mirror drill — win by breaking partner's stance or level"],techniques:["Penetration step mechanics & finishing the single leg","Double leg setup from a level change","Sprawl defence & returning to neutral"],positional:"Start unconnected at wrestling distance. Win = completed takedown or forcing a guard pull."},
-    Connected:{drills:["Grip fighting game — win by establishing inside grip control","Clinch game — win by completing a trip, hip throw, or significant off-balance"],techniques:["Inside grip fighting mechanics","Body lock takedown or trip from the clinch","Seatbelt to back from a failed takedown attempt"],positional:"Start in the clinch. Win = takedown completed or achieving a dominant back position."},
-    Scramble:{drills:["Scramble recovery game — start from a failed shot, win by regaining base or reversing","Re-shot game — win by either athlete re-establishing dominant control from chaos"],techniques:["Re-shot mechanics after a failed single leg","Scramble to back or turtle from a failed shot","Standing back up safely under pressure"],positional:"Both athletes start on all fours. Win = first to a recognised dominant position."}
-  },
-  guard:{
-    Outside:{drills:["DLR / shin-on-shin retention game — win by maintaining the position for 10s or sweeping","Lasso / spider control game — win by breaking posture or threatening a sweep"],techniques:["DLR entry mechanics & basic sweep","Shin-on-shin to single leg transition","Outside guard retention under passing pressure"],positional:"Start in outside guard. Passer wins = clean pass. Guard player wins = sweep or back take."},
-    Inside:{drills:["Closed guard posture game — passer wins by breaking guard, guard player wins by maintaining for 20s","Half guard recovery game — win by securing the underhook or recovering full guard"],techniques:["Closed guard: hip movement & off-balancing the passer","Half guard: fighting for and securing the underhook","Butterfly guard: basic lift sweep mechanics"],positional:"Start in closed or half guard. Standard positional rules apply."},
-    Neutral:{drills:["50/50 battle game — win by taking the back or completing a submission entry","Ashi garami entry game — win by achieving and holding ashi control for 5s"],techniques:["50/50 position: inside heel concept & control hierarchy","Ashi garami entry from guard","Transitioning from guard to leg entanglements"],positional:"Start seated facing each other. Submissions and leg entries on."}
-  },
-  passing:{
-    Outside:{drills:["Torreando / bullfighter game — win by achieving a clean leg pin and knee cut entry","Leg pin retention game — win by holding the pin for 5s or recovering guard"],techniques:["Torreando footwork & timing","Bullfighter to knee cut entry transition","Outside leg weave mechanics"],positional:"Passer starts standing, guard player seated. Passer wins = side control. Guard wins = full guard recovery."},
-    Inside:{drills:["Over-under pressure game — passer wins by completing smash pass, guard player wins by recovering","Headquarters (HQ) battle — win by passing or returning to full guard"],techniques:["Over-under grip & generating pressure mechanics","Smash pass from headquarters position","Dealing with the underhook from HQ"],positional:"Start in over-under or HQ. Standard pass / guard retention rules."},
-    Neutral:{drills:["Float passing game — win by clearing all legs and achieving side control without committing","Transition passing game — start mid-pass, win by completing or recovering"],techniques:["Floating pass mechanics: staying above without committing","Passing through entanglements without engaging leg locks","Reading and reacting to guard transitions mid-pass"],positional:"Start mid-pass with passer above. Passer wins = clean pass. Guard wins = full guard recovery."}
-  },
-  legs:{
-    Outside:{drills:["Single leg X (SLX) entry game — win by controlling for 5s or sweeping","Outside heel hook entry game — win by achieving the position (finish at coach's discretion)"],techniques:["Single leg X: entry mechanics & sweep","Outside heel hook: entry mechanics & finishing","Defending outside heel hook attempts"],positional:"Start seated. Leg entries open. Tap for heel hooks as directed by coach."},
-    Inside:{drills:["Ashi garami dominance game — win by maintaining inside position or completing a submission","Inside heel hook entry game — win by completing the entry (finish at coach's discretion)"],techniques:["Ashi garami: inside position dominance & heel hook finish","Inside heel hook: mechanics & safe practice protocol","Toe hold from ashi garami"],positional:"Start in ashi garami. Inside heel hooks tapped or demonstrated per coach's call."},
-    Neutral:{drills:["Kneebar entry game — win by completing entry from top or passing position","Calf slicer entry game — win by securing the calf slicer position"],techniques:["Kneebar entry from top passing position","Calf slicer mechanics & finishing","Reading available leg attacks from neutral"],positional:"Start from top passing or turtle. Look for available leg entries. Finish at coach's discretion."}
-  },
-  pins:{
-    "Chest-to-chest":{drills:["Mount maintenance game — win by holding mount for 20s or completing a submission entry","Side control retention game — win by maintaining pin for 15s against full escape attempts"],techniques:["Mount: controlling hip movement & climbing to high mount","Side control: pressure points & transitioning to north-south","Submission from chest-to-chest (coach's choice)"],positional:"Start in mount or side control. Defender wins = escape. Attacker wins = 30s held or submission."},
-    "Chest-to-back":{drills:["Back control retention game — win by maintaining seatbelt for 20s or sinking a hook","Turtle top game — win by rolling to back control or flattening to a pin"],techniques:["Back control: body triangle vs double hooks","Rear naked choke mechanics & finishing","Turtle top: taking the back or flattening to a pin"],positional:"Start with one athlete on back, other controlling. Defender wins = escape to guard or neutral."},
-    Filler:{drills:["Pin transition game — win by chaining two different pins without losing position","Escape chain game — win by recovering guard from any starting pin"],techniques:["Transitioning between pins: side control → mount → back","Escape mechanics: bridge & roll, elbow-knee, guard recovery","Coach's choice — address gaps from the week"],positional:"Start in coach's chosen pin. Win = 3 linked pins without escape, or escape to guard."}
-  }
-};
-
-const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
-
-let state={tab:"plan",block:1,theme:null,session:{drills:[],techniques:[],positionals:[]},sessionNotes:"",libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
+let state={tab:"plan",theme:null,session:{drills:[],techniques:[],positionals:[]},sessionNotes:"",libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
 
 function signIn(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>console.error("Sign-in error:",e));}
 function signOut(){auth.signOut();}
@@ -203,35 +167,21 @@ function init(){
 // Firestore: save the whole library array as a single document field
 function saveLib(){if(!state.user)return;LIBRARY_DOC.set({items:state.library}).catch(e=>console.error("Save error:",e));}
 
-function libFor(theme,subtopic,type){return state.library.filter(i=>i.theme===theme&&i.subtopic===subtopic&&i.type===type);}
-function hasDefaults(theme,subtopic){
-  const d=DEFAULTS[theme]?.[subtopic];if(!d)return false;
-  return!(libFor(theme,subtopic,"drill").length>0&&libFor(theme,subtopic,"technique").length>0&&libFor(theme,subtopic,"positional").length>0);
-}
-function loadDefaults(theme,subtopic){
-  const d=DEFAULTS[theme]?.[subtopic];if(!d)return;
-  if(!libFor(theme,subtopic,"drill").length)d.drills.forEach(x=>state.library.push({id:uid(),name:x,note:"",type:"drill",theme,subtopic}));
-  if(!libFor(theme,subtopic,"technique").length)d.techniques.forEach(x=>state.library.push({id:uid(),name:x,note:"",type:"technique",theme,subtopic}));
-  if(!libFor(theme,subtopic,"positional").length)state.library.push({id:uid(),name:d.positional,note:"",type:"positional",theme,subtopic});
-  saveLib();render();
-}
-function loadAllDefaults(){THEMES.forEach(t=>SUBTOPICS[t.id].forEach(s=>loadDefaults(t.id,s)));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-function setBlock(id){state.block=id;state.theme=null;render();}
-function setTheme(id){const next=state.theme===id?null:id;state.theme=next;state.session=next?{drills:[null,null],techniques:[null,null,null],positionals:[null]}:{drills:[],techniques:[],positionals:[]};state.sessionNotes="";render();}
-function setSessionNotes(v){state.sessionNotes=v;}
-function resetSession(){state.session={drills:[null,null],techniques:[null,null,null],positionals:[null]};state.sessionNotes="";render();}
+function setTheme(id){const next=state.theme===id?null:id;state.theme=next;state.session=next?{drills:[null,null],techniques:[null,null],positionals:[null,null]}:{drills:[],techniques:[],positionals:[]};state.sessionNotes="";render();}
+function setSessionNotes(v){state.sessionNotes=v;const el=document.getElementById('session-notes-print');if(el)el.textContent=v;}
+function resetSession(){state.session={drills:[null,null],techniques:[null,null],positionals:[null,null]};state.sessionNotes="";render();}
 function setTab(t){state.tab=t;render();}
 function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
 function showAddForm(overrides={}){
   const defTheme=state.libFilter.theme||"standing";
   state.form={name:"",note:"",type:state.libFilter.type||"drill",theme:defTheme,roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:"",...overrides};
-  state.editId=null;state.showForm=true;render();window.scrollTo({top:0,behavior:'smooth'});
+  state.editId=null;state.showForm=true;render();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50);
 }
 function editItem(id){
   const item=state.library.find(i=>i.id===id);if(!item)return;
   state.form={name:item.name,note:item.note||"",type:item.type,theme:item.theme,roles:item.roles||"symmetric",goal:item.goal||"",attackerGoal:item.attackerGoal||"",defenderGoal:item.defenderGoal||"",videoUrl:item.videoUrl||""};
-  state.editId=id;state.showForm=true;render();window.scrollTo({top:0,behavior:'smooth'});
+  state.editId=id;state.showForm=true;render();setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}),50);
 }
 function deleteItem(id){state.library=state.library.filter(i=>i.id!==id);saveLib();render();}
 function cancelForm(){state.showForm=false;state.editId=null;render();}
@@ -270,7 +220,7 @@ function buildSession(){
   if(!state.theme)return;
   const shuffle=arr=>[...arr].sort(()=>Math.random()-0.5);
   const pick=(type,n)=>{const ids=shuffle(state.library.filter(i=>i.theme===state.theme&&i.type===type)).slice(0,n).map(i=>i.id);while(ids.length<n)ids.push(null);return ids;};
-  state.session={drills:pick("drill",2),techniques:pick("technique",3),positionals:pick("positional",1)};
+  state.session={drills:pick("drill",2),techniques:pick("technique",2),positionals:pick("positional",2)};
   render();
 }
 function setSessionItem(type,index,id){state.session[type][index]=id||null;render();}
@@ -353,7 +303,7 @@ function renderPlan(){
         <div style="margin-top:8px">
           <p class="lbl">Announcements &amp; notes (optional)</p>
           <textarea class="form-textarea no-print" oninput="setSessionNotes(this.value)" placeholder="e.g. Promotions, upcoming events, reminders…">${state.sessionNotes}</textarea>
-          ${state.sessionNotes?`<div class="print-only" style="font-size:12pt;white-space:pre-wrap;padding:8px 0">${state.sessionNotes}</div>`:""}
+          <div id="session-notes-print" class="print-only" style="font-size:12pt;white-space:pre-wrap;padding:8px 0">${state.sessionNotes}</div>
         </div>
       </div>
     `:`<div style="text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px">Select a theme above to build today's session</div>`}
@@ -369,7 +319,6 @@ function renderLibrary(){
     return true;
   });
   const positionalWarn=false;
-  const allLoaded=!THEMES.some(t=>SUBTOPICS[t.id].some(s=>hasDefaults(t.id,s)));
   const formHtml=state.showForm?`
     <div class="form-card">
       <p style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin:0 0 14px">${state.editId?"Edit item":"Add to library"}</p>
@@ -445,8 +394,11 @@ function renderLibrary(){
         <button class="filter-btn${state.libFilter.type==="positional"?" on":""}" onclick="setLibFilter('type','positional')">Sparring</button>
       </div>
     </div>
+    ${!state.showForm&&state.user?`
+      <button class="add-btn" onclick="showAddForm()" style="margin-bottom:8px">+ Add drill, technique, or sparring</button>
+    `:""}
     ${formHtml}
-    ${filtered.length===0&&!state.showForm?`<div style="text-align:center;padding:32px 20px;color:var(--color-text-secondary);font-size:13px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">${state.library.length===0?"Library is empty — load defaults or add your own below":"No items match this filter"}</div>`:""}
+    ${filtered.length===0&&!state.showForm?`<div style="text-align:center;padding:32px 20px;color:var(--color-text-secondary);font-size:13px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)">${state.library.length===0?"Library is empty — add your first item above":"No items match this filter"}</div>`:""}
     ${filtered.map(item=>`
       <div class="lib-item">
         <div style="flex:1">
@@ -465,10 +417,7 @@ function renderLibrary(){
         </div>`:""}
       </div>
     `).join("")}
-    ${!state.showForm?state.user?`
-      <button class="add-btn" onclick="showAddForm()">+ Add drill, technique, or positional</button>
-      ${!allLoaded?`<button class="load-btn" onclick="loadAllDefaults()">Load all defaults into library for editing</button>`:""}
-    `:`<div style="text-align:center;padding:14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-secondary);margin-top:6px">Sign in to add or edit library items</div>`:""}
+    ${!state.showForm&&!state.user?`<div style="text-align:center;padding:14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-secondary);margin-top:6px">Sign in to add or edit library items</div>`:""}
   `;
 }
 
