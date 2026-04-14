@@ -95,7 +95,7 @@
   @media print {
     body { background: white; color: #1a1a18; font-size: 12pt; }
     .tab-bar, .print-btn, .lib-actions, .add-btn, .load-btn,
-    .blk-btn, .theme-btn, .filter-btn, .default-note { display: none !important; }
+    .blk-btn, .theme-btn, .filter-btn, .default-note, .no-print { display: none !important; }
     #app { max-width: 100% !important; padding: 0 !important; }
     .seg { border: 1px solid #ccc; border-radius: 0; padding: 10px 14px; margin-bottom: 10px; page-break-inside: avoid; }
     .seg-hd { margin-bottom: 8px; }
@@ -179,7 +179,7 @@ const DEFAULTS={
 
 const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
 
-let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
+let state={tab:"plan",block:1,theme:null,session:{drills:[],techniques:[],positionals:[]},libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:"",videoUrl:""}};
 
 function signIn(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>console.error("Sign-in error:",e));}
 function signOut(){auth.signOut();}
@@ -216,7 +216,7 @@ function loadDefaults(theme,subtopic){
 function loadAllDefaults(){THEMES.forEach(t=>SUBTOPICS[t.id].forEach(s=>loadDefaults(t.id,s)));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function setBlock(id){state.block=id;state.theme=null;render();}
-function setTheme(id){state.theme=state.theme===id?null:id;render();}
+function setTheme(id){const next=state.theme===id?null:id;state.theme=next;state.session=next?{drills:[null,null],techniques:[null,null,null],positionals:[null]}:{drills:[],techniques:[],positionals:[]};render();}
 function setTab(t){state.tab=t;render();}
 function setLibFilter(k,v){state.libFilter[k]=state.libFilter[k]===v?null:v;render();}
 function showAddForm(overrides={}){
@@ -258,17 +258,49 @@ function formatLastUsed(dateStr){
 function logSession(){
   if(!state.user||!state.theme)return;
   const now=new Date().toISOString();
-  state.library=state.library.map(i=>i.theme===state.theme?{...i,lastUsed:now}:i);
+  const ids=new Set([...state.session.drills,...state.session.techniques,...state.session.positionals].filter(Boolean));
+  state.library=state.library.map(i=>ids.has(i.id)?{...i,lastUsed:now}:i);
   saveLib();render();
 }
+function buildSession(){
+  if(!state.theme)return;
+  const shuffle=arr=>[...arr].sort(()=>Math.random()-0.5);
+  const pick=(type,n)=>{const ids=shuffle(state.library.filter(i=>i.theme===state.theme&&i.type===type)).slice(0,n).map(i=>i.id);while(ids.length<n)ids.push(null);return ids;};
+  state.session={drills:pick("drill",2),techniques:pick("technique",3),positionals:pick("positional",1)};
+  render();
+}
+function setSessionItem(type,index,id){state.session[type][index]=id||null;render();}
+function addSessionSlot(type){state.session[type].push(null);render();}
+function removeSessionSlot(type,index){state.session[type].splice(index,1);render();}
 
 function renderPlan(){
   const themeLabel=state.theme?THEMES.find(t=>t.id===state.theme).label:null;
-  const firstSub=state.theme?SUBTOPICS[state.theme][0]:null;
-  const def=state.theme?DEFAULTS[state.theme]?.[firstSub]:null;
-  const getDrills=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="drill");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.drills||[]};};
-  const getTechs=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="technique");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,defaults:def?.techniques||[]};};
-  const getPos=()=>{const c=state.library.filter(i=>i.theme===state.theme&&i.type==="positional");return c.length?{items:c,isDefault:false}:{items:null,isDefault:true,desc:def?.positional||""};};
+  const typeLabel={drills:"drill",techniques:"technique",positionals:"positional"};
+  function slotOpts(type){return state.library.filter(i=>i.theme===state.theme&&i.type===typeLabel[type]);}
+  function itemDetail(type,item){
+    if(!item)return"";
+    const video=item.videoUrl?`<a href="${item.videoUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#639922;margin-top:3px;display:inline-block">▶ Watch</a>`:"";
+    if(type==="drills"){const goal=item.roles==="asymmetric"?`<div style="font-size:11px;margin-top:3px"><span style="color:#639922">Attacker:</span> ${item.attackerGoal||"—"} &nbsp;·&nbsp; <span style="color:#639922">Defender:</span> ${item.defenderGoal||"—"}</div>`:(item.goal?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">Goal: ${item.goal}</div>`:"");return`<div class="drill custom" style="margin-top:4px">${item.name}${goal}${video}</div>`;}
+    if(type==="techniques"){return`<div class="tech-row" style="margin-top:4px"><span>${item.name}${item.note?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${item.note}</div>`:""}${item.lastUsed?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${formatLastUsed(item.lastUsed)}</div>`:""}${video}</span></div>`;}
+    if(type==="positionals"){return`<div class="pos-box custom" style="border-left:2px solid #3B6D11;border-radius:0;margin-top:4px">${item.name?`<div style="font-weight:500;margin-bottom:${item.note?"4px":"0"}">${item.name}</div>`:""}${item.note?`<div style="font-size:12px">${item.note}</div>`:""}${video}</div>`;}
+    return"";
+  }
+  function slot(type,index){
+    const id=state.session[type][index];
+    const item=id?state.library.find(i=>i.id===id):null;
+    const opts=slotOpts(type);
+    const label=typeLabel[type];
+    return`<div style="margin-bottom:8px">
+      <div style="display:flex;gap:6px;align-items:center" class="no-print">
+        <select class="form-select" style="flex:1" onchange="setSessionItem('${type}',${index},this.value)">
+          <option value="">— choose ${label} —</option>
+          ${opts.map(i=>`<option value="${i.id}"${i.id===id?" selected":""}>${i.name}</option>`).join("")}
+        </select>
+        <button class="icon-btn" style="flex-shrink:0" onclick="removeSessionSlot('${type}',${index})">×</button>
+      </div>
+      ${itemDetail(type,item)}
+    </div>`;
+  }
   return`
     <div style="margin-bottom:1.5rem">
       <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 8px">Today's theme</p>
@@ -279,9 +311,10 @@ function renderPlan(){
     ${state.theme?`
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session plan</p>
+          <p style="font-size:13px;color:var(--color-text-secondary);margin:0">Session builder</p>
           <div style="display:flex;gap:6px">
-            ${state.user?`<button class="print-btn" onclick="logSession()">Log session</button>`:""}
+            <button class="print-btn no-print" onclick="buildSession()">Auto-build</button>
+            ${state.user?`<button class="print-btn no-print" onclick="logSession()">Log session</button>`:""}
             <button class="print-btn" onclick="window.print()">Print</button>
           </div>
         </div>
@@ -295,18 +328,18 @@ function renderPlan(){
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">01</span><span class="seg-title">Dynamic drills</span></div><span class="seg-time">15–20 min</span></div>
-          <p class="lbl">Drills</p>
-          ${(()=>{const d=getDrills();if(d.isDefault)return d.defaults.map(x=>`<div class="drill">${x}</div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return d.items.map(x=>{const goalHtml=x.roles==="asymmetric"?`<div class="drill-roles" style="font-size:11px;margin-top:3px"><span style="color:#639922">Attacker:</span> ${x.attackerGoal||"—"} &nbsp;·&nbsp; <span style="color:#639922">Defender:</span> ${x.defenderGoal||"—"}</div>`:(x.goal?`<div class="drill-goal" style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">Goal: ${x.goal}</div>`:"");return`<div class="drill custom">${x.name}${goalHtml}</div>`;}).join("");})()}
+          ${state.session.drills.map((_,i)=>slot("drills",i)).join("")}
+          <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('drills')">+ Add drill</button>
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">02</span><span class="seg-title">Technique</span></div><span class="seg-time">15–20 min</span></div>
-          <p class="lbl">Techniques — solving problems from the drills</p>
-          ${(()=>{const t=getTechs();if(t.isDefault)return t.defaults.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x}</span></div>`).join("")+`<div class="default-note">Using defaults — load and edit in Library tab</div>`;return t.items.map((x,i)=>`<div class="tech-row"><span class="tech-n">${i+1}.</span><span>${x.name}${x.note?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${x.note}</div>`:""}${x.lastUsed?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">${formatLastUsed(x.lastUsed)}</div>`:""}</span></div>`).join("");})()}
+          ${state.session.techniques.map((_,i)=>slot("techniques",i)).join("")}
+          <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('techniques')">+ Add technique</button>
         </div>
         <div class="seg">
           <div class="seg-hd"><div style="display:flex;align-items:center"><span class="seg-num">03</span><span class="seg-title">Positional sparring + rolling</span></div><span class="seg-time">15–20 min</span></div>
-          <p class="lbl">Positional setup</p>
-          ${(()=>{const p=getPos();if(p.isDefault)return`<div class="pos-box">${p.desc}</div><div class="default-note">Using default — load and edit in Library tab</div>`;return p.items.map(x=>`<div class="pos-box custom" style="border-left:2px solid #3B6D11;border-radius:0;margin-bottom:6px">${x.name?`<div style="font-weight:500;margin-bottom:${x.note?"4px":"0"}">${x.name}</div>`:""}${x.note?`<div style="font-size:12px">${x.note}</div>`:""}</div>`).join("");})()}
+          ${state.session.positionals.map((_,i)=>slot("positionals",i)).join("")}
+          <button class="add-btn no-print" style="margin-top:4px" onclick="addSessionSlot('positionals')">+ Add positional</button>
           <p class="lbl" style="margin-top:8px">Free rolling</p>
           <div class="pos-box">Unrestricted rolling. Submissions on. Emphasis on positional dominance.</div>
         </div>
@@ -315,7 +348,7 @@ function renderPlan(){
           <span style="font-size:13px;color:#639922;font-weight:500">5 min</span>
         </div>
       </div>
-    `:`<div style="text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px">Select a theme above to generate today's session plan</div>`}
+    `:`<div style="text-align:center;padding:40px 20px;color:var(--color-text-secondary);font-size:13px">Select a theme above to build today's session</div>`}
   `;
 }
 
