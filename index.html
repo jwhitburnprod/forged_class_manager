@@ -116,6 +116,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
   // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────────
   // Get this from: Firebase Console → Your Project → Project Settings → Your apps
@@ -131,6 +132,7 @@
   // ─────────────────────────────────────────────────────────────────────────────
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const auth = firebase.auth();
   const LIBRARY_DOC = db.collection("fg_app").doc("library");
 </script>
 </head>
@@ -177,10 +179,14 @@ const DEFAULTS={
 
 const STANDING_OPENER={Unconnected:"Level change & penetration step drill — win by completing a shot attempt",Connected:"Grip fighting entry drill — win by establishing inside control from a tie-up",Scramble:"Scramble entry drill — start broken, win by first athlete to regain base"};
 
-let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:""}};
+let state={tab:"plan",block:1,theme:null,libFilter:{theme:null,type:null},libSearch:"",library:[],loading:true,user:undefined,showForm:false,editId:null,form:{name:"",note:"",type:"drill",theme:"standing",subtopic:"Unconnected",roles:"symmetric",goal:"",attackerGoal:"",defenderGoal:""}};
+
+function signIn(){auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>console.error("Sign-in error:",e));}
+function signOut(){auth.signOut();}
 
 // Firestore: real-time listener — updates all devices automatically
 function init(){
+  auth.onAuthStateChanged(user=>{state.user=user;render();});
   LIBRARY_DOC.onSnapshot(
     doc=>{
       state.library=doc.exists?(doc.data().items||[]):[];
@@ -193,7 +199,7 @@ function init(){
   );
 }
 // Firestore: save the whole library array as a single document field
-function saveLib(){LIBRARY_DOC.set({items:state.library}).catch(e=>console.error("Save error:",e));}
+function saveLib(){if(!state.user)return;LIBRARY_DOC.set({items:state.library}).catch(e=>console.error("Save error:",e));}
 
 function libFor(theme,subtopic,type){return state.library.filter(i=>i.theme===theme&&i.subtopic===subtopic&&i.type===type);}
 function hasDefaults(theme,subtopic){
@@ -403,22 +409,29 @@ function renderLibrary(){
           <div class="lib-item-name">${item.name}</div>
           ${item.type==="drill"?(item.roles==="asymmetric"?`<div class="lib-item-note">Attacker: ${item.attackerGoal||"—"}</div><div class="lib-item-note">Defender: ${item.defenderGoal||"—"}</div>`:(item.goal?`<div class="lib-item-note">Goal: ${item.goal}</div>`:"")):item.note?`<div class="lib-item-note">${item.note}</div>`:""}
         </div>
-        <div class="lib-actions">
+        ${state.user?`<div class="lib-actions">
           <button class="icon-btn" onclick="editItem('${item.id}')">Edit</button>
           <button class="icon-btn del" onclick="deleteItem('${item.id}')">Del</button>
-        </div>
+        </div>`:""}
       </div>
     `).join("")}
-    ${!state.showForm?`
+    ${!state.showForm?state.user?`
       <button class="add-btn" onclick="showAddForm()">+ Add drill, technique, or positional</button>
       ${!allLoaded?`<button class="load-btn" onclick="loadAllDefaults()">Load all defaults into library for editing</button>`:""}
-    `:""}
+    `:`<div style="text-align:center;padding:14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-secondary);margin-top:6px">Sign in to add or edit library items</div>`:""}
   `;
 }
 
 function render(){
   if(state.loading){document.getElementById("app").innerHTML=`<div style="text-align:center;padding:40px;color:var(--color-text-secondary);font-size:13px">Loading...</div>`;return;}
   document.getElementById("app").innerHTML=`
+    <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;min-height:24px">
+      ${state.user===undefined?""
+        :state.user
+          ?`<span style="font-size:12px;color:var(--color-text-secondary);margin-right:8px">${state.user.displayName||state.user.email}</span><button class="icon-btn" onclick="signOut()">Sign out</button>`
+          :`<button class="icon-btn" onclick="signIn()" style="font-size:13px;padding:6px 12px;color:var(--color-text-primary)">Sign in with Google</button>`
+      }
+    </div>
     <div class="tab-bar">
       <button class="tab${state.tab==="plan"?" on":""}" onclick="setTab('plan')">Session plan</button>
       <button class="tab${state.tab==="library"?" on":""}" onclick="setTab('library')">Coach library${state.library.length?" ("+state.library.length+")":""}</button>
